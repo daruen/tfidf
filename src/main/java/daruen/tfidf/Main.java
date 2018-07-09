@@ -1,6 +1,8 @@
 package daruen.tfidf;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -19,15 +21,20 @@ import java.util.TimerTask;
 import java.util.TreeMap;
 
 import daruen.tfidf.calculators.TFIDFCalculator;
+import daruen.tfidf.comparators.MapValueComparator;
 
 public class Main {
+	volatile static Map<String, Double> unorderedResults = Collections.synchronizedMap(new HashMap<>());
+
+	private static Comparator<String> comparator = new MapValueComparator<>(unorderedResults);
+
+	volatile static Map<String, Double> sortedMap = new TreeMap<>(comparator);
 
 	public static void main(String[] args) {
 		String d = null;
 		String t = null;
 		Integer nAux = null;
 		Integer p = null;
-		Map<String, Double> unorderedResults = Collections.synchronizedMap(new HashMap<>());
 
 		for (int i = 0; i < args.length - 1; i++) {
 			if (args[i].equals("-D") || args[i].equals("-d")) {
@@ -76,15 +83,7 @@ public class Main {
 
 				@Override
 				public void run() {
-					Map<String, Double> sortedMap = new TreeMap<>(new Comparator<String>() {
 
-						@Override
-						public int compare(String o1, String o2) {
-							Comparable valueA = (Comparable) unorderedResults.get(o1);
-							Comparable valueB = (Comparable) unorderedResults.get(o2);
-							return valueB.compareTo(valueA);
-						}
-					});
 					sortedMap.putAll(unorderedResults);
 
 					Set<String> sortedKeySet = sortedMap.keySet();
@@ -97,6 +96,7 @@ public class Main {
 						System.out.println(next + " " + sortedMap.get(next));
 
 					}
+					System.out.println();
 
 				}
 			}, 0l, p);
@@ -125,9 +125,13 @@ public class Main {
 						continue;
 					}
 
-					
-					directory = new File(d);
+					File createdFile = new File(
+							((Path) key.watchable()).resolve(((WatchEvent<Path>) event).context()).toString());
 
+					//This is done in order to check the lock of the file, is not the best way but I could not find out a better way
+					while (isFileUnlocked(createdFile) == false) {
+					}
+					directory = new File(d);
 					for (File f : directory.listFiles()) {
 						unorderedResults.put(f.getName(), tfidfCalculator.process(f, t));
 					}
@@ -148,6 +152,21 @@ public class Main {
 			e.printStackTrace();
 		}
 
+	}
+
+	public static boolean isFileUnlocked(File file) {
+		try {
+			FileInputStream in = new FileInputStream(file);
+			if (in != null)
+				in.close();
+			return true;
+		} catch (FileNotFoundException e) {
+			return false;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return true;
 	}
 
 }

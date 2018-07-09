@@ -9,12 +9,7 @@ In the function tfidf I use the two calculators of each algorithm.
 The usage of the application, first you need to compile the application with mvn clean install.
 
 
-
-
 java -jar "jarfile" -d "Dictionary path" -p "period of daemon" -t "term" -n "number of lines in top"
-
-It's suppose that the application watches the dictionary folder but i've found some problems and the application reads the file while is copying.
-I didn't have enough time to change this.
 
 This solution could be improved making multiple threads for searching the tfidf, in this thread we can have the idf as a shared variable between threads.
 and the thread just need to calculate the tf, create the tfidf calculations and store it in a shared map in order to get it from the timer.
